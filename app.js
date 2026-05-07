@@ -1,4 +1,4 @@
-/ ============================================================
+// ============================================================
 // SAIA DO OPERACIONAL :: APP.JS
 // Lógica completa da ferramenta de 5 etapas
 // ============================================================
@@ -280,7 +280,16 @@ async function save() {
 async function saveNow() {
   showSaveIndicator('salvando');
   try {
-    const ok = await window.AppAuth.salvarEstadoAgora(state);
+    let ok;
+    // fallback caso o auth.js antigo ainda esteja em cache (sem salvarEstadoAgora)
+    if (typeof window.AppAuth.salvarEstadoAgora === 'function') {
+      ok = await window.AppAuth.salvarEstadoAgora(state);
+    } else {
+      console.warn('[Saia] salvarEstadoAgora indisponível, usando fallback com debounce');
+      ok = await new Promise(resolve => {
+        window.AppAuth.salvarEstado(state, (r) => resolve(r));
+      });
+    }
     showSaveIndicator(ok ? 'salvo' : 'erro');
     return ok;
   } catch (e) {
@@ -352,7 +361,12 @@ async function goStep(n) {
   // Salva o estado IMEDIATO no Supabase antes de qualquer transição
   // pra garantir que nada que você digitou se perde
   try {
-    await window.AppAuth.salvarEstadoAgora(state);
+    if (typeof window.AppAuth.salvarEstadoAgora === 'function') {
+      await window.AppAuth.salvarEstadoAgora(state);
+    } else {
+      // fallback: força resolução do save com debounce
+      await new Promise(resolve => window.AppAuth.salvarEstado(state, resolve));
+    }
   } catch (e) {
     console.error('[Saia] erro ao salvar antes de trocar de etapa:', e);
   }
@@ -1255,26 +1269,46 @@ function baixarExcel() {
  
 // ===== INIT =====
 (async function() {
-  // protege a página
-  const session = await window.AppAuth.requireAuth();
-  if (!session) return;
+  try {
+    // protege a página
+    const session = await window.AppAuth.requireAuth();
+    if (!session) return;
  
-  // header
-  await window.renderHeader('app');
+    // header
+    await window.renderHeader('app');
  
-  // ícones
-  bootIcons();
+    // ícones
+    bootIcons();
  
-  // estado
-  await loadState();
-  renderAreas();
-  renderDespejo();
+    // estado
+    await loadState();
+    renderAreas();
+    renderDespejo();
  
-  // proteção: se fechar a aba ou recarregar, força save imediato
-  window.addEventListener('beforeunload', () => {
-    // sendBeacon não funciona com Supabase aqui, então mandamos sync
-    try { window.AppAuth.salvarEstadoAgora(state); } catch(e) {}
-  });
+    // proteção: se fechar a aba ou recarregar, força save imediato
+    window.addEventListener('beforeunload', () => {
+      try { window.AppAuth.salvarEstadoAgora(state); } catch(e) {}
+    });
+  } catch (err) {
+    console.error('[Saia] Erro na inicialização do app:', err);
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+      overlay.innerHTML = `
+        <div style="background:white;padding:32px;border-radius:12px;max-width:520px;text-align:left;border:1px solid #c63939;">
+          <h2 style="font-family:Fraunces,serif;font-size:22px;color:#c63939;margin-bottom:12px;">Erro ao carregar a ferramenta</h2>
+          <p style="font-size:14px;color:#4a4a4a;line-height:1.5;margin-bottom:16px;">
+            Algo travou ao iniciar. Detalhes técnicos para mostrar pra Fá ou pro suporte:
+          </p>
+          <pre style="background:#f4f1ea;padding:12px;border-radius:6px;font-size:11px;color:#1a1a1a;overflow:auto;max-height:200px;white-space:pre-wrap;">${(err && err.message) ? err.message : String(err)}</pre>
+          <div style="margin-top:18px;display:flex;gap:8px;">
+            <button onclick="location.reload()" style="padding:10px 16px;border-radius:6px;background:#026a77;color:white;border:none;cursor:pointer;font-weight:500;">Tentar de novo</button>
+            <button onclick="window.AppAuth.signOut()" style="padding:10px 16px;border-radius:6px;background:white;border:1px solid #d8d3c7;cursor:pointer;">Sair</button>
+          </div>
+        </div>
+      `;
+    }
+    return;
+  }
  
   // tira loading
   document.getElementById('loadingOverlay').classList.add('hidden');
