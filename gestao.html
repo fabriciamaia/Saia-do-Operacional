@@ -28,7 +28,7 @@
     max-width: 640px;
     line-height: 1.6;
   }
-
+ 
   .gestao-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -60,7 +60,7 @@
   .gstat.acc-orange .gstat-value { color: var(--orange); }
   .gstat.acc-lime .gstat-value { color: var(--lime); }
   .gstat.acc-terracotta .gstat-value { color: var(--terracotta); }
-
+ 
   /* filter bar */
   .filter-bar {
     display: flex;
@@ -83,14 +83,14 @@
   }
   .filter-pill:hover { border-color: var(--teal); color: var(--teal); }
   .filter-pill.active { background: var(--teal); color: white; border-color: var(--teal); }
-
+ 
   /* delegacao card */
   .deleg-list {
     display: flex;
     flex-direction: column;
     gap: 16px;
   }
-
+ 
   .deleg-card {
     background: var(--white);
     border: 1px solid var(--line-soft);
@@ -99,7 +99,7 @@
     transition: border-color 0.15s ease;
   }
   .deleg-card:hover { border-color: var(--line); }
-
+ 
   .deleg-head {
     display: flex;
     justify-content: space-between;
@@ -108,7 +108,7 @@
     flex-wrap: wrap;
     margin-bottom: 12px;
   }
-
+ 
   .deleg-title {
     font-family: 'Fraunces', serif;
     font-size: 20px;
@@ -116,7 +116,7 @@
     line-height: 1.25;
     margin-bottom: 4px;
   }
-
+ 
   .deleg-meta {
     display: flex;
     gap: 12px;
@@ -125,7 +125,7 @@
     color: var(--ink-muted);
   }
   .deleg-meta span { display: inline-flex; align-items: center; gap: 4px; }
-
+ 
   .deleg-status-pill {
     padding: 5px 12px;
     border-radius: 999px;
@@ -141,7 +141,7 @@
   .deleg-status-pill.fase-3 { background: var(--lime-soft); color: var(--teal-dark); }
   .deleg-status-pill.fase-ok { background: var(--lime); color: white; }
   .deleg-status-pill.fase-vol { background: var(--terracotta-soft); color: var(--terracotta); }
-
+ 
   /* Box de "como tá" */
   .deleg-detalhes {
     background: var(--paper-warm);
@@ -163,7 +163,7 @@
   }
   .deleg-detalhes-row { margin-bottom: 4px; }
   .deleg-detalhes-row:last-child { margin-bottom: 0; }
-
+ 
   /* form de log */
   .deleg-log-form {
     border-top: 1px solid var(--line-soft);
@@ -203,7 +203,7 @@
   .log-status-options label.active.ajustar { background: var(--orange); color: white; border-color: var(--orange); }
   .log-status-options label.active.voltou { background: var(--terracotta); color: white; border-color: var(--terracotta); }
   .log-status-options label.active.concluido { background: var(--teal); color: white; border-color: var(--teal); }
-
+ 
   .log-form-row {
     display: flex;
     gap: 8px;
@@ -215,7 +215,7 @@
     min-width: 200px;
     min-height: 50px;
   }
-
+ 
   /* histórico */
   .deleg-historico {
     margin-top: 12px;
@@ -236,13 +236,13 @@
     font-family: 'Inter', sans-serif;
   }
   .historico-toggle:hover { text-decoration: underline; }
-
+ 
   .historico-list {
     margin-top: 12px;
     display: none;
   }
   .historico-list.visible { display: block; }
-
+ 
   .historico-item {
     display: flex;
     gap: 12px;
@@ -283,7 +283,7 @@
     font-size: 11px;
   }
   .historico-remove:hover { color: var(--terracotta); }
-
+ 
   /* prioritárias do dia */
   .prioridade-banner {
     background: linear-gradient(135deg, var(--teal-soft), var(--lime-soft));
@@ -303,7 +303,7 @@
     color: var(--ink-soft);
     line-height: 1.55;
   }
-
+ 
   /* empty */
   .empty-block {
     text-align: center;
@@ -327,7 +327,7 @@
     margin-right: auto;
     line-height: 1.55;
   }
-
+ 
   @media (max-width: 800px) {
     .deleg-card { padding: 20px; }
     .historico-data { width: 80px; font-size: 10px; }
@@ -335,21 +335,28 @@
 </style>
 </head>
 <body>
-
+ 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading"></div>
 </div>
-
+ 
 <div id="headerSlot"></div>
-
+ 
 <section class="gestao-hero">
   <div class="container">
-    <h1>Gestão <em>diária</em>.</h1>
-    <p>Aqui você acompanha as delegações no dia a dia. Marca o que rodou bem, o que precisa de ajuste, e o que voltou pra sua mão. Sem isso, o plano é só intenção.</p>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:280px;">
+        <h1>Gestão <em>diária</em>.</h1>
+        <p>Aqui você acompanha as delegações no dia a dia. Marca o que rodou bem, o que precisa de ajuste, e o que voltou pra sua mão. Sem isso, o plano é só intenção.</p>
+      </div>
+      <button class="btn" id="btnRecarregar" onclick="recarregar()" title="Buscar dados mais recentes do Supabase">
+        <span id="iconReload"></span> atualizar
+      </button>
+    </div>
     <div class="gestao-stats" id="gestaoStats"></div>
   </div>
 </section>
-
+ 
 <section style="padding: 40px 0 80px;">
   <div class="container">
     <div id="prioridadeSlot"></div>
@@ -357,13 +364,13 @@
     <div id="delegList"></div>
   </div>
 </section>
-
+ 
 <footer>
   <div class="container">
     <p>Saia do Operacional :: ferramenta de aceleração comercial <strong>Implementare</strong></p>
   </div>
 </footer>
-
+ 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icons.js"></script>
 <script src="supabase-config.js"></script>
@@ -373,12 +380,12 @@
 let estado = null;
 let logsByRow = {}; // id -> array de logs
 let filtroAtual = 'todas'; // todas, pendentes, rodando, voltaram, concluidas
-
+ 
 function escapeHtml(s) {
   if (s == null) return '';
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-
+ 
 function getFase(r) {
   // Fase do plano em que a delegação está
   // Fase 1 :: precisa desenhar processo (ainda não pronto)
@@ -386,26 +393,26 @@ function getFase(r) {
   // Fase 3 :: começou, em acompanhamento
   // ok :: deu certo (concluido em qualquer log recente)
   // voltou :: voltou pra mão dela
-
+ 
   const lastLog = (logsByRow[r.id] || [])[0]; // mais recente
   if (lastLog) {
     if (lastLog.status === 'concluido') return { fase: 'ok', label: 'Concluída', cls: 'fase-ok' };
     if (lastLog.status === 'voltou') return { fase: 'voltou', label: 'Voltou pra mim', cls: 'fase-vol' };
   }
-
+ 
   const processoPronto = r.jaTemProcesso === 'sim' || r.statusProcesso === 'Concluído';
   const startFeito = r.statusStart === 'Concluído';
-
+ 
   if (!processoPronto) return { fase: 1, label: 'Fase 1: desenhando processo', cls: 'fase-1' };
   if (!startFeito) return { fase: 2, label: 'Fase 2: pronta para começar', cls: 'fase-2' };
   return { fase: 3, label: 'Fase 3: em acompanhamento', cls: 'fase-3' };
 }
-
+ 
 function getDeleg() {
   if (!estado) return [];
   return (estado.rows || []).filter(r => r.delegar && (r.micro || r.macro));
 }
-
+ 
 function renderStats() {
   const slot = document.getElementById('gestaoStats');
   const all = getDeleg();
@@ -438,7 +445,7 @@ function renderStats() {
     </div>
   `;
 }
-
+ 
 function renderFilters() {
   const all = getDeleg();
   const counts = { todas: all.length, fase1: 0, fase2: 0, fase3: 0, voltaram: 0, concluidas: 0 };
@@ -450,7 +457,7 @@ function renderFilters() {
     else if (f.fase === 'ok') counts.concluidas++;
     else if (f.fase === 'voltou') counts.voltaram++;
   });
-
+ 
   const slot = document.getElementById('filterBar');
   slot.innerHTML = `
     <button class="filter-pill ${filtroAtual==='todas'?'active':''}" onclick="setFiltro('todas')">Todas (${counts.todas})</button>
@@ -461,17 +468,17 @@ function renderFilters() {
     <button class="filter-pill ${filtroAtual==='concluidas'?'active':''}" onclick="setFiltro('concluidas')">Concluídas (${counts.concluidas})</button>
   `;
 }
-
+ 
 function setFiltro(f) {
   filtroAtual = f;
   renderFilters();
   renderList();
 }
-
+ 
 function renderPrioridade() {
   const all = getDeleg();
   const slot = document.getElementById('prioridadeSlot');
-
+ 
   // prioridades do dia: voltaram (urgente) + fase 3 com mais de 7 dias sem log + fase 2 prontas para começar
   const voltaram = all.filter(r => getFase(r).fase === 'voltou');
   const semLog = all.filter(r => {
@@ -482,12 +489,12 @@ function renderPrioridade() {
     const ageDays = (Date.now() - new Date(last.criado_em).getTime()) / (1000*60*60*24);
     return ageDays > 7;
   });
-
+ 
   if (voltaram.length === 0 && semLog.length === 0) {
     slot.innerHTML = '';
     return;
   }
-
+ 
   let msg = '';
   if (voltaram.length > 0) {
     msg += `<strong>${voltaram.length}</strong> ${voltaram.length === 1 ? 'delegação voltou' : 'delegações voltaram'} pra sua mão. Trate primeiro: o que falta para rodar de novo? Falta de processo, falta de pessoa certa, ou falta de ferramenta?`;
@@ -496,7 +503,7 @@ function renderPrioridade() {
     if (msg) msg += '<br><br>';
     msg += `<strong>${semLog.length}</strong> ${semLog.length === 1 ? 'delegação está' : 'delegações estão'} em acompanhamento sem registro há mais de 7 dias. Vale dar um check.`;
   }
-
+ 
   slot.innerHTML = `
     <div class="prioridade-banner">
       <h2>Atenção do dia</h2>
@@ -504,11 +511,11 @@ function renderPrioridade() {
     </div>
   `;
 }
-
+ 
 function renderList() {
   const slot = document.getElementById('delegList');
   let all = getDeleg();
-
+ 
   // filtra
   if (filtroAtual !== 'todas') {
     all = all.filter(r => {
@@ -521,7 +528,7 @@ function renderList() {
       return true;
     });
   }
-
+ 
   if (getDeleg().length === 0) {
     slot.innerHTML = `
       <div class="empty-block">
@@ -532,7 +539,7 @@ function renderList() {
     `;
     return;
   }
-
+ 
   if (all.length === 0) {
     slot.innerHTML = `
       <div class="empty-block">
@@ -542,14 +549,14 @@ function renderList() {
     `;
     return;
   }
-
+ 
   slot.innerHTML = `<div class="deleg-list">${all.map(renderCard).join('')}</div>`;
 }
-
+ 
 function renderCard(r) {
   const fa = getFase(r);
   const logs = logsByRow[r.id] || [];
-
+ 
   // detalhes do plano
   const detalhes = [];
   if (r.praQuem) detalhes.push(`<div class="deleg-detalhes-row"><strong>Pra quem:</strong> ${escapeHtml(r.praQuem)}</div>`);
@@ -562,7 +569,7 @@ function renderCard(r) {
   const detalhesHtml = detalhes.length > 0
     ? `<div class="deleg-detalhes">${detalhes.join('')}</div>`
     : '';
-
+ 
   // metadados
   const metaParts = [];
   if (r.area) metaParts.push(`<span>${escapeHtml(r.area)}</span>`);
@@ -570,7 +577,7 @@ function renderCard(r) {
   if (r.tempo) metaParts.push(`<span>${escapeHtml(r.tempo)}</span>`);
   if (r.prioridade) metaParts.push(`<span>prio. ${escapeHtml(r.prioridade.toLowerCase())}</span>`);
   const metaHtml = metaParts.length > 0 ? `<div class="deleg-meta">${metaParts.join('')}</div>` : '';
-
+ 
   // form de log
   const formHtml = `
     <div class="deleg-log-form">
@@ -587,7 +594,7 @@ function renderCard(r) {
       </div>
     </div>
   `;
-
+ 
   // histórico
   const histHtml = logs.length > 0 ? `
     <div class="deleg-historico">
@@ -608,7 +615,7 @@ function renderCard(r) {
       </div>
     </div>
   ` : '';
-
+ 
   return `
     <div class="deleg-card">
       <div class="deleg-head">
@@ -624,7 +631,7 @@ function renderCard(r) {
     </div>
   `;
 }
-
+ 
 function labelStatus(s) {
   return ({
     'rodou-bem': 'rodou bem',
@@ -633,23 +640,23 @@ function labelStatus(s) {
     'concluido': 'concluído'
   })[s] || s;
 }
-
+ 
 function formatDate(s) {
   if (!s) return '';
   const d = new Date(s + 'T00:00:00');
   if (isNaN(d.getTime())) return s;
   return d.toLocaleDateString('pt-BR');
 }
-
+ 
 function formatDateTime(s) {
   if (!s) return '';
   const d = new Date(s);
   if (isNaN(d.getTime())) return s;
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
-
+ 
 let logStatusSelecionado = {};
-
+ 
 function setLogStatus(rowId, status) {
   logStatusSelecionado[rowId] = status;
   const opts = document.getElementById('logOpts-' + rowId);
@@ -658,7 +665,7 @@ function setLogStatus(rowId, status) {
     l.classList.toggle('active', l.dataset.status === status);
   });
 }
-
+ 
 async function salvarLog(rowId) {
   const status = logStatusSelecionado[rowId];
   if (!status) {
@@ -667,28 +674,28 @@ async function salvarLog(rowId) {
   }
   const obsEl = document.getElementById('logObs-' + rowId);
   const obs = obsEl ? obsEl.value.trim() : '';
-
+ 
   const btn = obsEl ? obsEl.parentElement.querySelector('button') : null;
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span> registrando...'; }
-
+ 
   const log = await window.AppAuth.adicionarLog(rowId, status, obs);
   if (!log) {
     if (btn) { btn.disabled = false; btn.innerHTML = window.Icons.plus + ' Registrar'; }
     alert('Erro ao salvar. Tenta de novo.');
     return;
   }
-
+ 
   // atualiza local
   if (!logsByRow[rowId]) logsByRow[rowId] = [];
   logsByRow[rowId].unshift(log);
   delete logStatusSelecionado[rowId];
-
+ 
   renderStats();
   renderFilters();
   renderPrioridade();
   renderList();
 }
-
+ 
 async function apagarLog(logId) {
   if (!confirm('Apagar esse registro?')) return;
   const ok = await window.AppAuth.removerLog(logId);
@@ -705,12 +712,12 @@ async function apagarLog(logId) {
   renderPrioridade();
   renderList();
 }
-
+ 
 function toggleHist(rowId) {
   const el = document.getElementById('hist-' + rowId);
   if (el) el.classList.toggle('visible');
 }
-
+ 
 async function carregarLogs() {
   const todos = await window.AppAuth.listarLogs();
   logsByRow = {};
@@ -719,20 +726,49 @@ async function carregarLogs() {
     logsByRow[l.row_id].push(l);
   });
 }
-
-(async function() {
-  const session = await window.AppAuth.requireAuth();
-  if (!session) return;
-  await window.renderHeader('gestao');
+ 
+async function recarregar() {
+  const btn = document.getElementById('btnRecarregar');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span> atualizando...'; }
   estado = await window.AppAuth.carregarEstado();
   await carregarLogs();
+  const todasRows = (estado && estado.rows) ? estado.rows.length : 0;
+  const delegando = (estado && estado.rows) ? estado.rows.filter(r => r.delegar).length : 0;
+  console.log('[Gestão] Carregado do Supabase:', todasRows, 'atividades total,', delegando, 'marcadas para delegar');
+  if (delegando === 0 && todasRows > 0) {
+    console.warn('[Gestão] ATENÇÃO: você tem', todasRows, 'atividades, mas nenhuma marcada com delegar=true. Volta na ferramenta e marca o checkbox "Delegar?"');
+  }
   renderStats();
   renderPrioridade();
   renderFilters();
   renderList();
+  if (btn) { btn.disabled = false; btn.innerHTML = window.Icons.arrowRight + ' atualizar'; }
+}
+ 
+(async function() {
+  try {
+    const session = await window.AppAuth.requireAuth();
+    if (!session) return;
+    await window.renderHeader('gestao');
+    // popula ícones estáticos
+    const iconReload = document.getElementById('iconReload');
+    if (iconReload) iconReload.innerHTML = window.Icons.arrowRight;
+    await recarregar();
+  } catch (err) {
+    console.error('[Gestão] Erro na inicialização:', err);
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+      overlay.innerHTML = '<div style="background:white;padding:32px;border-radius:12px;max-width:520px;text-align:left;border:1px solid #c63939;">' +
+        '<h2 style="font-family:Fraunces,serif;font-size:22px;color:#c63939;margin-bottom:12px;">Erro ao carregar a gestão</h2>' +
+        '<pre style="background:#f4f1ea;padding:12px;border-radius:6px;font-size:11px;overflow:auto;max-height:200px;white-space:pre-wrap;">' + ((err && err.message) ? err.message : String(err)) + '</pre>' +
+        '<div style="margin-top:18px;"><button onclick="location.reload()" style="padding:10px 16px;border-radius:6px;background:#026a77;color:white;border:none;cursor:pointer;">Tentar de novo</button></div>' +
+        '</div>';
+    }
+    return;
+  }
   document.getElementById('loadingOverlay').classList.add('hidden');
 })();
 </script>
-
+ 
 </body>
 </html>
