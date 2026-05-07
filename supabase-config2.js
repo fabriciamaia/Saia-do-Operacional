@@ -15,5 +15,5 @@
 
 window.SUPABASE_CONFIG = {
   url: 'https://umpuwptcctpppnjhzcxh.supabase.co',
-  anonKey: 'a chave nova que você gerou no passo 2'
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcHV3cHRjY3RwcHBuamh6Y3hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjYxNjIsImV4cCI6MjA5Mzc0MjE2Mn0.h_8gHdvra8jUIGgSrJK64vv9NVSOrOFpWz9u3mRpc00'
 };
