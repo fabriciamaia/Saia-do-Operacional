@@ -2,19 +2,19 @@
 // SAIA DO OPERACIONAL :: APP.JS
 // Lógica completa da ferramenta de 5 etapas
 // ============================================================
-
+ 
 let state = {
   rows: [],
   selectedArea: '',
   selectedICP: '',
   areasFinalizadas: []
 };
-
+ 
 const FREQ_OPTIONS = ['Diário', 'A cada 2 dias', 'Semanal', 'Quinzenal', 'Mensal', 'Conforme demanda'];
 const PRIO_OPTIONS = ['Alta', 'Média', 'Baixa'];
 // Profissões (não setores). Recepcionista (não Recepção). Adicionada Secretária.
 const QUEM_OPTIONS = ['Eu', 'Recepcionista', 'Secretária', 'Enfermeira', 'Técnica de enfermagem', 'Auxiliar', 'Sócia(o)', 'Gerente', 'Ninguém ainda', 'Outro'];
-
+ 
 // ===== ÁREAS =====
 const AREAS = [
   {
@@ -58,7 +58,7 @@ const AREAS = [
     defaultPilar: 'Estratégico'
   }
 ];
-
+ 
 // ===== CATÁLOGO :: 54 atividades pré-definidas =====
 const CATALOG = {
   atendimento: [
@@ -222,13 +222,13 @@ const CATALOG = {
     }
   ]
 };
-
+ 
 const ICP_HINTS = {
   expansao: { delegueMais: 'Você já tem time. Tudo que parece operacional repetitivo deveria estar delegado.' },
   evolucao: { delegueMais: 'Você geralmente faz quase tudo sozinha ou com 1 ajudante. Foque em tirar das suas mãos o que é claramente operacional repetido.' },
   'nova-fase': { delegueMais: 'Você frequentemente trabalha em coworking ou consultório enxuto. Aqui o foco é mapear, não delegar tudo agora. Delegação vem quando o caixa permite.' }
 };
-
+ 
 function newRow(data) {
   data = data || {};
   return {
@@ -265,25 +265,54 @@ function newRow(data) {
     ajusteNecessario: data.ajusteNecessario || ''
   };
 }
-
+ 
 // ===== STATE PERSIST =====
+// save() :: usar para digitação contínua (oninput em texto). Tem debounce.
 async function save() {
+  showSaveIndicator('salvando');
   await window.AppAuth.salvarEstado(state, (ok) => {
-    const ind = document.getElementById('savedIndicator');
-    if (!ind) return;
-    if (ok) {
-      ind.textContent = 'salvo';
-      ind.classList.remove('error');
-    } else {
-      ind.textContent = 'erro ao salvar';
-      ind.classList.add('error');
-    }
-    ind.classList.add('visible');
-    clearTimeout(save._t);
-    save._t = setTimeout(() => ind.classList.remove('visible'), 1200);
+    showSaveIndicator(ok ? 'salvo' : 'erro');
   });
 }
-
+ 
+// saveNow() :: usar para eventos pontuais (clique, checkbox, select, mover, remover).
+// Salva imediato sem debounce.
+async function saveNow() {
+  showSaveIndicator('salvando');
+  try {
+    const ok = await window.AppAuth.salvarEstadoAgora(state);
+    showSaveIndicator(ok ? 'salvo' : 'erro');
+    return ok;
+  } catch (e) {
+    showSaveIndicator('erro');
+    console.error('[Saia] saveNow falhou:', e);
+    return false;
+  }
+}
+ 
+function showSaveIndicator(estado) {
+  const ind = document.getElementById('savedIndicator');
+  if (!ind) return;
+  if (estado === 'salvando') {
+    ind.textContent = 'salvando...';
+    ind.classList.remove('error');
+    ind.classList.add('visible');
+    clearTimeout(showSaveIndicator._t);
+  } else if (estado === 'salvo') {
+    ind.textContent = 'salvo';
+    ind.classList.remove('error');
+    ind.classList.add('visible');
+    clearTimeout(showSaveIndicator._t);
+    showSaveIndicator._t = setTimeout(() => ind.classList.remove('visible'), 1500);
+  } else if (estado === 'erro') {
+    ind.textContent = 'erro ao salvar';
+    ind.classList.add('error');
+    ind.classList.add('visible');
+    clearTimeout(showSaveIndicator._t);
+    showSaveIndicator._t = setTimeout(() => ind.classList.remove('visible'), 4000);
+  }
+}
+ 
 async function loadState() {
   const data = await window.AppAuth.carregarEstado();
   if (data) {
@@ -295,7 +324,7 @@ async function loadState() {
     };
   }
 }
-
+ 
 // ===== ICONS BOOT =====
 function bootIcons() {
   const map = {
@@ -318,29 +347,37 @@ function bootIcons() {
     if (el) el.innerHTML = html;
   });
 }
-
+ 
 // ===== STEP NAV =====
-function goStep(n) {
+async function goStep(n) {
+  // Salva o estado IMEDIATO no Supabase antes de qualquer transição
+  // pra garantir que nada que você digitou se perde
+  try {
+    await window.AppAuth.salvarEstadoAgora(state);
+  } catch (e) {
+    console.error('[Saia] erro ao salvar antes de trocar de etapa:', e);
+  }
+ 
   document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('step-' + n).classList.add('active');
   const target = document.querySelector('.step-btn[data-step="' + n + '"]');
   if (target) target.classList.add('active');
-
+ 
   document.querySelectorAll('.step-btn').forEach(b => {
     const s = parseInt(b.dataset.step);
     if (s < n) b.classList.add('done');
     else if (s === n) b.classList.remove('done');
   });
-
+ 
   if (n === 2) renderAreas();
   if (n === 3) { renderCatalog(); renderDespejo(); renderConcludeArea(); }
   if (n === 4) renderSummary();
   if (n === 5) renderPlano();
-
+ 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
+ 
 // ===== ETAPA 2 :: ÁREAS =====
 function renderAreas() {
   const grid = document.getElementById('areasGrid');
@@ -358,13 +395,13 @@ function renderAreas() {
       </div>
     `;
   }).join('');
-
+ 
   // ICP pills
   document.querySelectorAll('.icp-pill').forEach(p => {
     if (p.dataset.icp === state.selectedICP) p.classList.add('active');
     else p.classList.remove('active');
   });
-
+ 
   // progresso
   const prog = document.getElementById('progressoAreas');
   if (state.areasFinalizadas.length === 0) {
@@ -377,19 +414,19 @@ function renderAreas() {
     prog.innerHTML = `<strong style="color:var(--teal-dark);font-family:Fraunces,serif;">Áreas concluídas:</strong> ${pills}`;
   }
 }
-
+ 
 function selectArea(id) {
   state.selectedArea = id;
   renderAreas();
-  save();
+  saveNow();
 }
-
+ 
 function selectICP(id) {
   state.selectedICP = id;
   renderAreas();
-  save();
+  saveNow();
 }
-
+ 
 // ===== ETAPA 3 :: CATÁLOGO =====
 function renderCatalog() {
   const cont = document.getElementById('catalogContainer');
@@ -402,16 +439,16 @@ function renderCatalog() {
       </div>`;
     return;
   }
-
+ 
   const area = AREAS.find(a => a.id === state.selectedArea);
   const catalog = CATALOG[state.selectedArea] || [];
   const addedKeys = new Set(state.rows.filter(r => r.fromCatalog).map(r => r.fromCatalog));
-
+ 
   let icpHint = '';
   if (state.selectedICP && ICP_HINTS[state.selectedICP]) {
     icpHint = `<div class="insight-box" style="margin-bottom:20px;"><strong>Dica para sua fase:</strong> ${ICP_HINTS[state.selectedICP].delegueMais}</div>`;
   }
-
+ 
   // Mapeia áreas para variáveis CSS
   const accentMap = {
     atendimento: { color: 'var(--teal)', soft: 'var(--teal-soft)' },
@@ -421,7 +458,7 @@ function renderCatalog() {
     gestao: { color: 'var(--plum)', soft: 'var(--plum-soft)' }
   };
   const acc = accentMap[state.selectedArea] || accentMap.atendimento;
-
+ 
   cont.innerHTML = icpHint + `
     <div class="catalog-section" style="--accent: ${acc.color}; --accent-soft: ${acc.soft};">
       <div class="catalog-head">
@@ -456,17 +493,17 @@ function renderCatalog() {
     </div>
   `;
 }
-
+ 
 function renderConcludeArea() {
   const slot = document.getElementById('concludeAreaSlot');
   if (!slot) return;
   if (!state.selectedArea) { slot.innerHTML = ''; return; }
   if (state.areasFinalizadas.includes(state.selectedArea)) { slot.innerHTML = ''; return; }
-
+ 
   const area = AREAS.find(a => a.id === state.selectedArea);
   const rowsArea = state.rows.filter(r => r.fromCatalog && r.fromCatalog.startsWith(state.selectedArea + '::'));
   if (rowsArea.length === 0) { slot.innerHTML = ''; return; }
-
+ 
   slot.innerHTML = `
     <div class="conclude-area-card">
       <div>
@@ -477,22 +514,22 @@ function renderConcludeArea() {
     </div>
   `;
 }
-
+ 
 function concludeArea() {
   if (state.selectedArea && !state.areasFinalizadas.includes(state.selectedArea)) {
     state.areasFinalizadas.push(state.selectedArea);
   }
   state.selectedArea = '';
+  saveNow(); // salva ANTES de transição
   goStep(2);
-  save();
 }
-
+ 
 function addFromCatalog(areaId, macroName, microIdx) {
   const macroBlock = (CATALOG[areaId] || []).find(m => m.macro === macroName);
   if (!macroBlock) return;
   const m = macroBlock.micros[microIdx];
   if (!m) return;
-
+ 
   const key = `${areaId}::${macroName}::${microIdx}`;
   const existing = state.rows.find(r => r.fromCatalog === key);
   if (existing) {
@@ -514,9 +551,9 @@ function addFromCatalog(areaId, macroName, microIdx) {
   renderCatalog();
   renderDespejo();
   renderConcludeArea();
-  save();
+  saveNow();
 }
-
+ 
 function addAllFromArea(areaId) {
   const catalog = CATALOG[areaId] || [];
   const addedKeys = new Set(state.rows.filter(r => r.fromCatalog).map(r => r.fromCatalog));
@@ -542,24 +579,24 @@ function addAllFromArea(areaId) {
   renderCatalog();
   renderDespejo();
   renderConcludeArea();
-  save();
+  saveNow();
 }
-
+ 
 // ===== LISTA =====
 function addRow() {
   state.rows.push(newRow());
   renderDespejo();
-  save();
+  saveNow();
 }
-
+ 
 function removeRow(id) {
   state.rows = state.rows.filter(r => r.id !== id);
   renderCatalog();
   renderDespejo();
   renderConcludeArea();
-  save();
+  saveNow();
 }
-
+ 
 function moveRow(id, direction) {
   const idx = state.rows.findIndex(r => r.id === id);
   if (idx < 0) return;
@@ -568,14 +605,28 @@ function moveRow(id, direction) {
   const r = state.rows.splice(idx, 1)[0];
   state.rows.splice(newIdx, 0, r);
   renderDespejo();
-  save();
+  saveNow();
 }
-
+ 
+// Campos onde digitação é contínua (livre, texto, data, url) :: debounce faz sentido
+const CAMPOS_TEXTO_LIVRE = new Set([
+  'micro', 'macro', 'tempo',
+  'linkProcessoExistente', 'linkProcesso',
+  'dataConclusao', 'dataStart',
+  'praQuem', 'ferramentaGestao', 'formaAcompanhamento',
+  'resultados30d', 'ajusteNecessario'
+]);
+ 
 function updateRow(id, field, value) {
   const r = state.rows.find(x => x.id === id);
   if (!r) return;
   r[field] = value;
-  save();
+  // Decide: digitação livre usa debounce. Evento pontual salva imediato.
+  if (CAMPOS_TEXTO_LIVRE.has(field)) {
+    save();
+  } else {
+    saveNow();
+  }
   updateMeta();
   if (field === 'pilar') {
     document.querySelectorAll('select[data-row="' + id + '"][data-field="pilar"]').forEach(el => {
@@ -592,7 +643,7 @@ function updateRow(id, field, value) {
   const resD = document.getElementById('resumoDelegar');
   if (resD) resD.textContent = state.rows.filter(x=>x.delegar).length;
 }
-
+ 
 function escapeHtml(s) {
   if (s == null) return '';
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -602,7 +653,7 @@ function escapeJs(s) {
   if (s == null) return "''";
   return "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
 }
-
+ 
 function renderDespejo() {
   renderDesktopTable();
   renderMobileCards();
@@ -614,9 +665,9 @@ function renderDespejo() {
   if (rd) rd.textContent = state.rows.filter(r => r.delegar).length;
   updateMeta();
 }
-
+ 
 const AREA_NAMES = AREAS.map(a => a.name);
-
+ 
 function renderDesktopTable() {
   const tbody = document.getElementById('despejoBody');
   if (!tbody) return;
@@ -674,7 +725,7 @@ function renderDesktopTable() {
     tbody.appendChild(tr);
   });
 }
-
+ 
 function renderMobileCards() {
   const cont = document.getElementById('mobileCards');
   if (!cont) return;
@@ -754,12 +805,12 @@ function renderMobileCards() {
     cont.appendChild(div);
   });
 }
-
+ 
 function autoGrow(el) {
   el.style.height = 'auto';
   el.style.height = (el.scrollHeight) + 'px';
 }
-
+ 
 function parseTempoToMin(t) {
   if (!t) return 0;
   const s = String(t).toLowerCase().replace(',', '.');
@@ -772,7 +823,7 @@ function parseTempoToMin(t) {
   if (!hMatch && !mMatch && numOnly) total += parseFloat(numOnly[1]);
   return total || 0;
 }
-
+ 
 function freqMultiplier(f) {
   switch (f) {
     case 'Diário': return 5;
@@ -784,7 +835,7 @@ function freqMultiplier(f) {
     default: return 0;
   }
 }
-
+ 
 function updateMeta() {
   const total = state.rows.filter(r => r.micro || r.macro).length;
   const delegar = state.rows.filter(r => r.delegar).length;
@@ -800,13 +851,13 @@ function updateMeta() {
   const tp = document.getElementById('metaTempo');
   if (tp) tp.textContent = horas + 'h';
 }
-
+ 
 // ===== ETAPA 4 :: DIAGNÓSTICO =====
 function renderSummary() {
   const cont = document.getElementById('step4Content');
   const valid = state.rows.filter(r => r.pilar);
   const total = valid.length;
-
+ 
   if (total < 1) {
     cont.innerHTML = `
       <div class="empty-state">
@@ -815,15 +866,15 @@ function renderSummary() {
       </div>`;
     return;
   }
-
+ 
   const est = valid.filter(r => r.pilar === 'Estratégico').length;
   const tat = valid.filter(r => r.pilar === 'Tático').length;
   const ope = valid.filter(r => r.pilar === 'Operacional').length;
   const del = state.rows.filter(r => r.delegar).length;
-
+ 
   const pct = (n) => total > 0 ? Math.round((n / total) * 100) : 0;
   const pctTotalGeral = state.rows.length > 0 ? Math.round((del / state.rows.length) * 100) : 0;
-
+ 
   const areas = {};
   const areasOp = {};
   state.rows.forEach(r => {
@@ -834,13 +885,13 @@ function renderSummary() {
       }
     }
   });
-
+ 
   let areaTopOp = null;
   let areaTopOpN = 0;
   Object.entries(areasOp).forEach(([s, n]) => {
     if (n > areaTopOpN) { areaTopOp = s; areaTopOpN = n; }
   });
-
+ 
   let diagMsg = '<strong>Leitura rápida:</strong> ';
   const opPct = pct(ope);
   const estPct = pct(est);
@@ -856,7 +907,7 @@ function renderSummary() {
   if (areaTopOp && areaTopOpN >= 2) {
     diagMsg += ` A área onde mais tem operacional é <strong>${escapeHtml(areaTopOp)}</strong> (${areaTopOpN} atividades). Comece por aí.`;
   }
-
+ 
   const totalArea = Object.values(areas).reduce((a,b) => a+b, 0);
   const sortedAreas = Object.entries(areas).sort((a,b) => b[1]-a[1]);
   const areasHtml = sortedAreas.length === 0
@@ -870,7 +921,7 @@ function renderSummary() {
             <div class="heat-num">${n}</div>
           </div>`;
       }).join('');
-
+ 
   cont.innerHTML = `
     <div class="summary-grid">
       <div class="stat-card accent-teal">
@@ -899,7 +950,7 @@ function renderSummary() {
         <div class="stat-sub">${pctTotalGeral}% do total</div>
       </div>
     </div>
-
+ 
     <div class="heat-section">
       <h3>Distribuição por nível</h3>
       <div class="heat-sub">Quanto da sua semana está em cada camada</div>
@@ -919,22 +970,22 @@ function renderSummary() {
         <div class="heat-num">${pct(ope)}%</div>
       </div>
     </div>
-
+ 
     <div class="heat-section" style="margin-top: 16px;">
       <h3>Por área</h3>
       <div class="heat-sub">Onde sua atenção está indo</div>
       ${areasHtml}
     </div>
-
+ 
     ${total >= 3 ? `<div class="insight-box">${diagMsg}</div>` : ''}
   `;
 }
-
+ 
 // ===== ETAPA 5 :: PLANO =====
 function renderPlano() {
   const container = document.getElementById('planoContainer');
   const toDelegate = state.rows.filter(r => r.delegar && (r.micro || r.macro));
-
+ 
   if (toDelegate.length === 0) {
     const totalRows = state.rows.filter(r => r.micro || r.macro).length;
     const msg = totalRows === 0
@@ -948,10 +999,10 @@ function renderPlano() {
       </div>`;
     return;
   }
-
+ 
   container.innerHTML = toDelegate.map(r => renderPlanCard(r)).join('');
 }
-
+ 
 function renderPlanCard(r) {
   const prioRaw = (r.prioridade || '').toLowerCase();
   const prioClass = prioRaw === 'média' ? 'media' : prioRaw;
@@ -960,7 +1011,7 @@ function renderPlanCard(r) {
   const tempoTag = r.tempo ? `<span>${escapeHtml(r.tempo)}</span>` : '';
   const areaTag = r.area ? `<span>${escapeHtml(r.area)}</span>` : '';
   const quemHojeTag = r.quemFaz ? `<span>hoje: ${escapeHtml(r.quemFaz)}</span>` : '';
-
+ 
   // FASE 0 :: já tem processo desenhado?
   const jaTem = r.jaTemProcesso;
   const fase0Html = `
@@ -985,7 +1036,7 @@ function renderPlanCard(r) {
       ` : ''}
     </div>
   `;
-
+ 
   // FASE 1 :: definir processo (só ativa se nao tem)
   const fase1Disabled = jaTem === 'sim';
   const fase1Html = `
@@ -1052,7 +1103,7 @@ function renderPlanCard(r) {
       </div>
     </div>
   `;
-
+ 
   // FASE 2 :: começar
   const fase2Html = `
     <div class="plan-phase fase-2">
@@ -1091,7 +1142,7 @@ function renderPlanCard(r) {
       </div>
     </div>
   `;
-
+ 
   // FASE 3 :: acompanhar 30 dias
   const fase3Html = `
     <div class="plan-phase fase-3">
@@ -1121,7 +1172,7 @@ function renderPlanCard(r) {
       </div>
     </div>
   `;
-
+ 
   return `
     <div class="plan-card">
       <div class="plan-card-head">
@@ -1145,29 +1196,35 @@ function renderPlanCard(r) {
     </div>
   `;
 }
-
+ 
 function printPlan() {
   goStep(5);
   setTimeout(function() { window.print(); }, 300);
 }
-
+ 
 // ===== INIT =====
 (async function() {
   // protege a página
   const session = await window.AppAuth.requireAuth();
   if (!session) return;
-
+ 
   // header
   await window.renderHeader('app');
-
+ 
   // ícones
   bootIcons();
-
+ 
   // estado
   await loadState();
   renderAreas();
   renderDespejo();
-
+ 
+  // proteção: se fechar a aba ou recarregar, força save imediato
+  window.addEventListener('beforeunload', () => {
+    // sendBeacon não funciona com Supabase aqui, então mandamos sync
+    try { window.AppAuth.salvarEstadoAgora(state); } catch(e) {}
+  });
+ 
   // tira loading
   document.getElementById('loadingOverlay').classList.add('hidden');
 })();
