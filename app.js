@@ -293,23 +293,21 @@ async function saveNow() {
 function showSaveIndicator(estado) {
   const ind = document.getElementById('savedIndicator');
   if (!ind) return;
+  ind.classList.remove('error', 'saving');
   if (estado === 'salvando') {
-    ind.textContent = 'salvando...';
-    ind.classList.remove('error');
-    ind.classList.add('visible');
+    ind.textContent = 'salvando';
+    ind.classList.add('saving', 'visible');
     clearTimeout(showSaveIndicator._t);
   } else if (estado === 'salvo') {
-    ind.textContent = 'salvo';
-    ind.classList.remove('error');
+    ind.textContent = 'tudo salvo';
     ind.classList.add('visible');
     clearTimeout(showSaveIndicator._t);
-    showSaveIndicator._t = setTimeout(() => ind.classList.remove('visible'), 1500);
+    showSaveIndicator._t = setTimeout(() => ind.classList.remove('visible'), 2000);
   } else if (estado === 'erro') {
     ind.textContent = 'erro ao salvar';
-    ind.classList.add('error');
-    ind.classList.add('visible');
+    ind.classList.add('error', 'visible');
     clearTimeout(showSaveIndicator._t);
-    showSaveIndicator._t = setTimeout(() => ind.classList.remove('visible'), 4000);
+    showSaveIndicator._t = setTimeout(() => ind.classList.remove('visible'), 5000);
   }
 }
  
@@ -340,6 +338,7 @@ function bootIcons() {
     iconPlus: window.Icons.plus,
     iconPlus2: window.Icons.plus,
     iconPrint: window.Icons.print,
+    iconExcel: window.Icons.download,
     iconGestao: window.Icons.arrowRight
   };
   Object.entries(map).forEach(([id, html]) => {
@@ -1200,6 +1199,58 @@ function renderPlanCard(r) {
 function printPlan() {
   goStep(5);
   setTimeout(function() { window.print(); }, 300);
+}
+ 
+// ===== BAIXAR PLANILHA (CSV que abre no Excel/Google Sheets) =====
+function baixarExcel() {
+  if (!state.rows || state.rows.length === 0) {
+    alert('Você ainda não listou nenhuma atividade. Volta na etapa 3 e adiciona algumas.');
+    return;
+  }
+ 
+  const cabecalho = [
+    'Nível', 'Área', 'Macro', 'Atividade (micro)', 'Quem faz hoje',
+    'Frequência', 'Tempo', 'Prioridade', 'Delegar?',
+    'Já tem processo?', 'Link do processo',
+    'Quem desenha', 'Como desenhar', 'Onde fica registrado',
+    'Data conclusão (desenho)', 'Status do desenho',
+    'Como começar', 'Data de início', 'Para quem (nome)', 'Status do start',
+    'Onde acompanha', 'Como acompanha', 'Resultados 30d', 'Ajuste necessário'
+  ];
+ 
+  const escapeCsv = (v) => {
+    if (v == null) return '';
+    const s = String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes(';')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  };
+ 
+  const linhas = state.rows.map(r => [
+    r.pilar, r.area, r.macro, r.micro, r.quemFaz,
+    r.freq, r.tempo, r.prioridade, r.delegar ? 'Sim' : 'Não',
+    r.jaTemProcesso === 'sim' ? 'Sim' : (r.jaTemProcesso === 'nao' ? 'Não' : ''),
+    r.linkProcessoExistente || r.linkProcesso || '',
+    r.quemDesenha, r.comoDesenhar, r.como,
+    r.dataConclusao, r.statusProcesso,
+    r.startComo, r.dataStart, r.praQuem, r.statusStart,
+    r.ferramentaGestao, r.formaAcompanhamento, r.resultados30d, r.ajusteNecessario
+  ].map(escapeCsv).join(';'));
+ 
+  // BOM no início pra Excel reconhecer acentos
+  const csv = '\uFEFF' + cabecalho.map(escapeCsv).join(';') + '\n' + linhas.join('\n');
+ 
+  const hoje = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `saia-do-operacional-${hoje}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
  
 // ===== INIT =====
