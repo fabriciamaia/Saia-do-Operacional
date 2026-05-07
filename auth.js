@@ -3,7 +3,7 @@
 // Carrega o cliente Supabase, oferece funções de login/cadastro,
 // proteção de rota e CRUD do estado da ferramenta.
 // ============================================================
-
+ 
 (function() {
   // checa configuração antes de qualquer coisa
   if (!window.SUPABASE_CONFIG || window.SUPABASE_CONFIG.url === 'COLE_AQUI_SUA_URL') {
@@ -16,23 +16,23 @@
     });
     return;
   }
-
+ 
   // cria cliente
   const { url, anonKey } = window.SUPABASE_CONFIG;
   const supabase = window.supabase.createClient(url, anonKey);
-
+ 
   // ===== AUTH =====
   async function getSession() {
     const { data, error } = await supabase.auth.getSession();
     if (error) { console.error('getSession:', error); return null; }
     return data.session;
   }
-
+ 
   async function getUser() {
     const session = await getSession();
     return session ? session.user : null;
   }
-
+ 
   async function getPerfil() {
     const user = await getUser();
     if (!user) return null;
@@ -44,7 +44,7 @@
     if (error) { console.error('getPerfil:', error); return null; }
     return data;
   }
-
+ 
   async function signUp(email, password, nome, especialidade) {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -55,12 +55,12 @@
     });
     return { data, error };
   }
-
+ 
   async function signIn(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     return { data, error };
   }
-
+ 
   async function signOut() {
     const { error } = await supabase.auth.signOut();
     if (!error) {
@@ -68,14 +68,14 @@
     }
     return { error };
   }
-
+ 
   async function resetPassword(email) {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + '/redefinir-senha.html'
     });
     return { data, error };
   }
-
+ 
   // proteger uma página: redireciona pra login se não logado
   async function requireAuth() {
     const session = await getSession();
@@ -85,7 +85,7 @@
     }
     return session;
   }
-
+ 
   // proteger página admin
   async function requireAdmin() {
     const session = await requireAuth();
@@ -98,7 +98,7 @@
     }
     return { session, perfil };
   }
-
+ 
   // ===== ESTADO DA FERRAMENTA =====
   async function carregarEstado() {
     const user = await getUser();
@@ -119,7 +119,7 @@
     }
     return data.estado;
   }
-
+ 
   let saveTimer = null;
   async function salvarEstado(estado, callback) {
     const user = await getUser();
@@ -134,11 +134,29 @@
           estado: estado,
           atualizado_em: new Date().toISOString()
         }, { onConflict: 'user_id' });
-      if (error) console.error('salvarEstado:', error);
+      if (error) console.error('[Saia] salvarEstado erro:', error);
+      else console.log('[Saia] estado salvo no Supabase');
       if (callback) callback(!error);
     }, 500);
   }
-
+ 
+  // SEM debounce :: usado em transições de etapa
+  async function salvarEstadoAgora(estado) {
+    const user = await getUser();
+    if (!user) return false;
+    clearTimeout(saveTimer); // cancela debounce pendente
+    const { error } = await supabase
+      .from('estado_ferramenta')
+      .upsert({
+        user_id: user.id,
+        estado: estado,
+        atualizado_em: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+    if (error) console.error('[Saia] salvarEstadoAgora erro:', error);
+    else console.log('[Saia] estado salvo IMEDIATO no Supabase');
+    return !error;
+  }
+ 
   // ===== LOG DE ACOMPANHAMENTO =====
   async function listarLogs(rowId) {
     const user = await getUser();
@@ -153,7 +171,7 @@
     if (error) { console.error('listarLogs:', error); return []; }
     return data || [];
   }
-
+ 
   async function adicionarLog(rowId, status, observacao) {
     const user = await getUser();
     if (!user) return null;
@@ -170,7 +188,7 @@
     if (error) { console.error('adicionarLog:', error); return null; }
     return data;
   }
-
+ 
   async function removerLog(logId) {
     const { error } = await supabase
       .from('log_acompanhamento')
@@ -178,7 +196,7 @@
       .eq('id', logId);
     return !error;
   }
-
+ 
   // ===== ADMIN =====
   async function adminListarUsuarias() {
     const { data, error } = await supabase
@@ -188,7 +206,7 @@
     if (error) { console.error('adminListarUsuarias:', error); return []; }
     return data || [];
   }
-
+ 
   async function adminCarregarEstadoUsuaria(userId) {
     const { data, error } = await supabase
       .from('estado_ferramenta')
@@ -198,7 +216,7 @@
     if (error) { console.error('adminCarregarEstado:', error); return null; }
     return data;
   }
-
+ 
   async function adminAtualizarFase(userId, fase) {
     const { error } = await supabase
       .from('perfis')
@@ -206,13 +224,13 @@
       .eq('id', userId);
     return !error;
   }
-
+ 
   // expõe global
   window.AppAuth = {
     supabase, getSession, getUser, getPerfil,
     signUp, signIn, signOut, resetPassword,
     requireAuth, requireAdmin,
-    carregarEstado, salvarEstado,
+    carregarEstado, salvarEstado, salvarEstadoAgora,
     listarLogs, adicionarLog, removerLog,
     adminListarUsuarias, adminCarregarEstadoUsuaria, adminAtualizarFase
   };
